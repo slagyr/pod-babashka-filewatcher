@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-VERSION=$(cargo pkgid | cut -d# -f2 | cut -d: -f2)
+VERSION=$(grep '^version' Cargo.toml | head -1 | awk -F'"' '{print $2}')
+ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 
 rm -rf /tmp/release
 mkdir -p /tmp/release
@@ -10,7 +11,7 @@ cd /tmp/release
 
 ## release binary as zip archive
 
-zip "pod-babashka-filewatcher-$VERSION-$PLATFORM-amd64.zip" pod-babashka-filewatcher
+zip "pod-babashka-filewatcher-$VERSION-$PLATFORM-$ARCH.zip" pod-babashka-filewatcher
 
 ## cleanup
 

@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux
+            arch: amd64
+          - os: ubuntu-22.04-arm
+            platform: linux
+            arch: arm64
+          - os: macos-13
+            platform: macos
+            arch: amd64
+          - os: macos-14
+            platform: macos
+            arch: arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ matrix.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            ${{ matrix.os }}-cargo-
+
+      - name: Build
+        run: cargo build --release
+        timeout-minutes: 30
+
+      - name: Package
+        shell: bash
+        run: |
+          VERSION=$(grep '^version' Cargo.toml | head -1 | awk -F'"' '{print $2}')
+          mkdir -p /tmp/release
+          cp target/release/pod-babashka-filewatcher /tmp/release/
+          cd /tmp/release
+          zip "pod-babashka-filewatcher-${VERSION}-${{ matrix.platform }}-${{ matrix.arch }}.zip" pod-babashka-filewatcher
+          rm pod-babashka-filewatcher
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: /tmp/release/*.zip
+          draft: false
+          prerelease: false
